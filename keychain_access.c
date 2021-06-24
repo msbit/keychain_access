@@ -234,7 +234,8 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
                                                  CSSM_DL_DB_RECORD_ANY,
                                                  &searchList, &searchRef);
 
-  char *errorMessage = "Search for item named %s failed: %d\n";
+  char errorMessage[1024];
+  snprintf(errorMessage, 1023, "Search for item named %s failed", p_keyName);
 
   if (status != errSecSuccess) {
   searchFailed:
@@ -247,10 +248,10 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
     }
 
     if (status == errSecItemNotFound) {
-      fprintf(stderr, "Could not find a item named %s.\n", p_keyName);
-    } else {
-      fprintf(stderr, errorMessage, p_keyName, (int)status);
+      snprintf(errorMessage, 1023, "Could not find a item named %s", p_keyName);
     }
+
+    kca_print_status_error(errorMessage, status);
 
     return 1;
   }
@@ -266,7 +267,7 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
   status = SecKeychainItemCopyContent(itemRef, &itemClass, NULL, NULL, NULL);
 
   if (status != errSecSuccess) {
-    errorMessage = "Copy content failed for %s: %d\n";
+    snprintf(errorMessage, 1023, "Copy content failed for %s", p_keyName);
     goto searchFailed;
   }
 
