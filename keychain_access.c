@@ -278,24 +278,21 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
     case kSecGenericPasswordItemClass:
       printf("kSecGenericPasswordItemClass");
       break;
-    // Causes: "warning: overflow in constant expression"
-    // case kSecCertificateItemClass:
-    //   printf("kSecCertificateItemClass");
-    //   break;
+    case kSecCertificateItemClass:
+      printf("kSecCertificateItemClass");
+      break;
     case CSSM_DL_DB_RECORD_SYMMETRIC_KEY:
       printf("CSSM_DL_DB_RECORD_SYMMETRIC_KEY");
       break;
     case CSSM_DL_DB_RECORD_ALL_KEYS:
       printf("CSSM_DL_DB_RECORD_ALL_KEYS");
       break;
-    /*
     case CSSM_DL_DB_RECORD_PUBLIC_KEY:
       printf("CSSM_DL_DB_RECORD_PUBLIC_KEY");
       break;
     case CSSM_DL_DB_RECORD_PRIVATE_KEY:
       printf("CSSM_DL_DB_RECORD_PRIVATE_KEY");
       break;
-    */
     default:
       printf("unknown item class (%u)", (unsigned int)itemClass);
     }
