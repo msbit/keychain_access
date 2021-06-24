@@ -326,9 +326,6 @@ searchFailed:
     case kSecGenericPasswordItemClass:
       printf("kSecGenericPasswordItemClass");
       break;
-    case kSecAppleSharePasswordItemClass:
-      printf("kSecAppleSharePasswordItemClass");
-      break;
     // Causes: "warning: overflow in constant expression"
     // case kSecCertificateItemClass:
     //   printf("kSecCertificateItemClass");
