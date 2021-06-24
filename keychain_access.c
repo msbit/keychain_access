@@ -37,6 +37,8 @@
 #include <openssl/pem.h>
 #include <openssl/pkcs12.h>
 
+void kca_print_status_error(const char *, OSStatus);
+
 /**
  *  @param p_password NULL here means no password.
  */
@@ -76,7 +78,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
                                  kSecItemPemArmour, &keyParams, &exportedData);
 
   if (status != errSecSuccess) {
-    fprintf(stderr, "Export error: %d\n", (int)status);
+    kca_print_status_error("Export error", status);
     return 1;
   }
 
@@ -165,8 +167,7 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
                                  &exportedData);
 
   if (status != errSecSuccess || exportedData == NULL) {
-    fprintf(stderr, "keychain_access: Exporting public key failed: %d\n",
-            (int)status);
+    kca_print_status_error("Exporting public key failed", status);
     return 1;
   }
 
@@ -388,4 +389,8 @@ int main(int p_argc, char **p_argv) {
   }
 
   return kca_print_key(keyName, keyPassword);
+}
+
+void kca_print_status_error(const char *prefix, OSStatus status) {
+  fprintf(stderr, "keychain_access: %s: %d\n", prefix, (int)status);
 }
