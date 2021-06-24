@@ -75,7 +75,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   status = SecKeychainItemExport(p_keyItem, kSecFormatWrappedPKCS8,
                                  kSecItemPemArmour, &keyParams, &exportedData);
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
     fprintf(stderr, "Export error: %d\n", (int)status);
     return 1;
   }
@@ -164,7 +164,7 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   status = SecKeychainItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams,
                                  &exportedData);
 
-  if (status != noErr || exportedData == NULL) {
+  if (status != errSecSuccess || exportedData == NULL) {
     fprintf(stderr, "keychain_access: Exporting public key failed: %d\n",
             (int)status);
     return 1;
@@ -234,7 +234,7 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   char *errorMessage = "Search for item named %s failed: %d\n";
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
   searchFailed:
     if (searchRef != NULL) {
       CFRelease(searchRef);
@@ -255,7 +255,7 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   status = SecKeychainSearchCopyNext(searchRef, &itemRef);
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
     goto searchFailed;
   }
 
@@ -263,7 +263,7 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   status = SecKeychainItemCopyContent(itemRef, &itemClass, NULL, NULL, NULL);
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
     errorMessage = "Copy content failed for %s: %d\n";
     goto searchFailed;
   }
