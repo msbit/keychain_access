@@ -157,30 +157,6 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
       return 1;
     }
     
-    if(p8inf->broken)
-    {
-      fprintf(stderr, "Warning: broken key encoding: ");
-      
-      switch(p8inf->broken)
-      {
-      case PKCS8_NO_OCTET:
-        fprintf(stderr, "No Octet String in PrivateKey\n");
-        break;
-        
-      case PKCS8_EMBEDDED_PARAM:
-        fprintf(stderr, "DSA parameters included in PrivateKey\n");
-        break;
-        
-      case PKCS8_NS_DB:
-        fprintf(stderr, "DSA public key include in PrivateKey\n");
-        break;
-        
-      default:
-        fprintf(stderr, "Unknown broken type\n");
-        break;
-      }
-    }
-    
     PKCS8_PRIV_KEY_INFO_free(p8inf);
     
     PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
