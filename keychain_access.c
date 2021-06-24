@@ -55,12 +55,12 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
 
   CFDataRef exportKey;
 
-  if (p_password)
+  if (p_password) {
     exportKey =
         CFDataCreate(NULL, (unsigned char *)p_password, strlen(p_password));
-
-  else
+  } else {
     exportKey = CFDataCreate(NULL, (unsigned char *)"12345", 5);
+  }
 
   SecKeyImportExportParameters keyParams;
   keyParams.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
@@ -75,77 +75,77 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   status = SecKeychainItemExport(p_keyItem, kSecFormatWrappedPKCS8,
                                  kSecItemPemArmour, &keyParams, &exportedData);
 
-  if (status == noErr) {
-    // If the user did set a password, just print the key
-    if (p_password) {
-      write(fileno(stdout), CFDataGetBytePtr(exportedData),
-            CFDataGetLength(exportedData));
-
-      return 0;
-    }
-
-    // It no password was given, use openssl to create a key with no password...
-
-    int opensslPipe[2];
-    if (pipe(opensslPipe) != 0) {
-      perror("pipe(2) error");
-      return 1;
-    }
-
-    FILE *fp;
-    fp = fdopen(opensslPipe[0], "r");
-    if (fp == NULL) {
-      perror("fdopen(3) error");
-      return 1;
-    }
-
-    ssize_t written;
-    written = write(opensslPipe[1], CFDataGetBytePtr(exportedData),
-                    CFDataGetLength(exportedData));
-
-    if (written < CFDataGetLength(exportedData)) {
-      perror("write(2) error");
-      return 1;
-    }
-
-    // Close pipe, so OpenSSL sees an end
-    close(opensslPipe[1]);
-
-    // Init OpenSSL
-    ERR_load_crypto_strings();
-    OpenSSL_add_all_algorithms();
-
-    // Read key through this pipe
-    X509_SIG *p8;
-    p8 = PEM_read_PKCS8(fp, NULL, NULL, NULL);
-
-    // Try to decrypt
-    PKCS8_PRIV_KEY_INFO *p8inf;
-    p8inf = PKCS8_decrypt(p8, "12345", 5);
-
-    X509_SIG_free(p8);
-
-    EVP_PKEY *pkey;
-
-    if (!p8inf) {
-      fprintf(stderr, "Error decrypting key\n");
-      ERR_print_errors_fp(stderr);
-      return 1;
-    }
-
-    if (!(pkey = EVP_PKCS82PKEY(p8inf))) {
-      fprintf(stderr, "Error converting key\n");
-      ERR_print_errors_fp(stderr);
-      return 1;
-    }
-
-    PKCS8_PRIV_KEY_INFO_free(p8inf);
-
-    PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
-  } else {
+  if (status != noErr) {
     fprintf(stderr, "Export error: %d\n", (int)status);
     return 1;
   }
+
+  // If the user did set a password, just print the key
+  if (p_password) {
+    write(fileno(stdout), CFDataGetBytePtr(exportedData),
+          CFDataGetLength(exportedData));
+
+    return 0;
+  }
+
+  // It no password was given, use openssl to create a key with no password...
+
+  int opensslPipe[2];
+  if (pipe(opensslPipe) != 0) {
+    perror("pipe(2) error");
+    return 1;
+  }
+
+  FILE *fp;
+  fp = fdopen(opensslPipe[0], "r");
+  if (fp == NULL) {
+    perror("fdopen(3) error");
+    return 1;
+  }
+
+  ssize_t written;
+  written = write(opensslPipe[1], CFDataGetBytePtr(exportedData),
+                  CFDataGetLength(exportedData));
+
+  if (written < CFDataGetLength(exportedData)) {
+    perror("write(2) error");
+    return 1;
+  }
+
+  // Close pipe, so OpenSSL sees an end
+  close(opensslPipe[1]);
+
+  // Init OpenSSL
+  ERR_load_crypto_strings();
+  OpenSSL_add_all_algorithms();
+
+  // Read key through this pipe
+  X509_SIG *p8;
+  p8 = PEM_read_PKCS8(fp, NULL, NULL, NULL);
+
+  // Try to decrypt
+  PKCS8_PRIV_KEY_INFO *p8inf;
+  p8inf = PKCS8_decrypt(p8, "12345", 5);
+
+  X509_SIG_free(p8);
+
+  EVP_PKEY *pkey;
+
+  if (!p8inf) {
+    fprintf(stderr, "Error decrypting key\n");
+    ERR_print_errors_fp(stderr);
+    return 1;
+  }
+
+  if (!(pkey = EVP_PKCS82PKEY(p8inf))) {
+    fprintf(stderr, "Error converting key\n");
+    ERR_print_errors_fp(stderr);
+    return 1;
+  }
+
+  PKCS8_PRIV_KEY_INFO_free(p8inf);
+
+  PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
 
   return 0;
 }
@@ -183,19 +183,22 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   }
 
   int beginDiff = firstNewLine - pemBytes;
-  if (beginDiff < 0)
+  if (beginDiff < 0) {
     goto reformat_panic;
+  }
 
   // Search for the end marker to know where the key data ends
   char *endMarker =
       strnstr(pemBytes, "\n-----END ", CFDataGetLength(exportedData));
 
-  if (endMarker == NULL)
+  if (endMarker == NULL) {
     goto reformat_panic;
+  }
 
   int endDiff = endMarker - pemBytes;
-  if (endDiff < 0)
+  if (endDiff < 0) {
     goto reformat_panic;
+  }
 
   // Just print what is between the previous markers with 2 new markers around
   // them, this new markers are acutally compatible with openssl now.
@@ -233,25 +236,28 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   if (status != noErr) {
   searchFailed:
-    if (searchRef)
+    if (searchRef) {
       CFRelease(searchRef);
+    }
 
-    if (itemRef)
+    if (itemRef) {
       CFRelease(itemRef);
+    }
 
-    if (status == errSecItemNotFound)
+    if (status == errSecItemNotFound) {
       fprintf(stderr, "Could not find a item named %s.\n", p_keyName);
-
-    else
+    } else {
       fprintf(stderr, errorMessage, p_keyName, (int)status);
+    }
 
     return 1;
   }
 
   status = SecKeychainSearchCopyNext(searchRef, &itemRef);
 
-  if (status != noErr)
+  if (status != noErr) {
     goto searchFailed;
+  }
 
   // TODO: cleanup search
 
@@ -262,47 +268,45 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
     goto searchFailed;
   }
 
-  if (itemClass == CSSM_DL_DB_RECORD_PRIVATE_KEY)
+  if (itemClass == CSSM_DL_DB_RECORD_PRIVATE_KEY) {
     return kca_print_private_key(itemRef, p_keyPassword);
-
-  else if (itemClass == CSSM_DL_DB_RECORD_PUBLIC_KEY)
-    return kca_print_public_key(itemRef);
-
-  else {
-    printf("Handling ");
-
-    switch (itemClass) {
-    case kSecInternetPasswordItemClass:
-      printf("kSecInternetPasswordItemClass");
-      break;
-    case kSecGenericPasswordItemClass:
-      printf("kSecGenericPasswordItemClass");
-      break;
-    case kSecCertificateItemClass:
-      printf("kSecCertificateItemClass");
-      break;
-    case CSSM_DL_DB_RECORD_SYMMETRIC_KEY:
-      printf("CSSM_DL_DB_RECORD_SYMMETRIC_KEY");
-      break;
-    case CSSM_DL_DB_RECORD_ALL_KEYS:
-      printf("CSSM_DL_DB_RECORD_ALL_KEYS");
-      break;
-    case CSSM_DL_DB_RECORD_PUBLIC_KEY:
-      printf("CSSM_DL_DB_RECORD_PUBLIC_KEY");
-      break;
-    case CSSM_DL_DB_RECORD_PRIVATE_KEY:
-      printf("CSSM_DL_DB_RECORD_PRIVATE_KEY");
-      break;
-    default:
-      printf("unknown item class (%u)", (unsigned int)itemClass);
-    }
-
-    printf(" is not yet implemented.\n");
-
-    return 1;
   }
 
-  return 0;
+  if (itemClass == CSSM_DL_DB_RECORD_PUBLIC_KEY) {
+    return kca_print_public_key(itemRef);
+  }
+
+  printf("Handling ");
+
+  switch (itemClass) {
+  case kSecInternetPasswordItemClass:
+    printf("kSecInternetPasswordItemClass");
+    break;
+  case kSecGenericPasswordItemClass:
+    printf("kSecGenericPasswordItemClass");
+    break;
+  case kSecCertificateItemClass:
+    printf("kSecCertificateItemClass");
+    break;
+  case CSSM_DL_DB_RECORD_SYMMETRIC_KEY:
+    printf("CSSM_DL_DB_RECORD_SYMMETRIC_KEY");
+    break;
+  case CSSM_DL_DB_RECORD_ALL_KEYS:
+    printf("CSSM_DL_DB_RECORD_ALL_KEYS");
+    break;
+  case CSSM_DL_DB_RECORD_PUBLIC_KEY:
+    printf("CSSM_DL_DB_RECORD_PUBLIC_KEY");
+    break;
+  case CSSM_DL_DB_RECORD_PRIVATE_KEY:
+    printf("CSSM_DL_DB_RECORD_PRIVATE_KEY");
+    break;
+  default:
+    printf("unknown item class (%u)", (unsigned int)itemClass);
+  }
+
+  printf(" is not yet implemented.\n");
+
+  return 1;
 }
 
 void kca_print_help(FILE *p_fp, const char *p_arg0) {
@@ -343,8 +347,9 @@ int main(int p_argc, char **p_argv) {
   // -p pwname for searching a password
 
   const char *arg0 = "keychain_access";
-  if (p_argc >= 1)
+  if (p_argc >= 1) {
     arg0 = p_argv[0];
+  }
 
   while ((option = getopt(p_argc, p_argv, "vhp:")) != -1) {
     switch (option) {
@@ -374,7 +379,9 @@ int main(int p_argc, char **p_argv) {
     fprintf(stderr, "%s: Too many key names given.\n", arg0);
     kca_print_help(stderr, arg0);
     return 1;
-  } else if (argcAfter < 1) {
+  }
+
+  if (argcAfter < 1) {
     fprintf(stderr, "%s: Missing key name.\n", arg0);
     kca_print_help(stderr, arg0);
     return 1;
