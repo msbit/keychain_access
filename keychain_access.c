@@ -55,7 +55,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
 
   CFDataRef exportKey;
 
-  if (p_password) {
+  if (p_password != NULL) {
     exportKey =
         CFDataCreate(NULL, (unsigned char *)p_password, strlen(p_password));
   } else {
@@ -66,8 +66,8 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   keyParams.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
   keyParams.flags = 0; // kSecKeySecurePassphrase
   keyParams.passphrase = exportKey;
-  keyParams.alertTitle = 0;
-  keyParams.alertPrompt = 0;
+  keyParams.alertTitle = NULL;
+  keyParams.alertPrompt = NULL;
 
   CFDataRef exportedData;
   OSStatus status;
@@ -81,7 +81,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   }
 
   // If the user did set a password, just print the key
-  if (p_password) {
+  if (p_password != NULL) {
     write(fileno(stdout), CFDataGetBytePtr(exportedData),
           CFDataGetLength(exportedData));
 
@@ -131,13 +131,13 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
 
   EVP_PKEY *pkey;
 
-  if (!p8inf) {
+  if (p8inf == NULL) {
     fprintf(stderr, "Error decrypting key\n");
     ERR_print_errors_fp(stderr);
     return 1;
   }
 
-  if (!(pkey = EVP_PKCS82PKEY(p8inf))) {
+  if ((pkey = EVP_PKCS82PKEY(p8inf)) == NULL) {
     fprintf(stderr, "Error converting key\n");
     ERR_print_errors_fp(stderr);
     return 1;
@@ -151,20 +151,20 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
 }
 
 int kca_print_public_key(SecKeychainItemRef p_keyItem) {
-  CFDataRef exportedData = 0;
+  CFDataRef exportedData = NULL;
   OSStatus status;
 
   SecKeyImportExportParameters keyParams;
   keyParams.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
   keyParams.flags = 0;
-  keyParams.passphrase = 0;
-  keyParams.alertTitle = 0;
-  keyParams.alertPrompt = 0;
+  keyParams.passphrase = NULL;
+  keyParams.alertTitle = NULL;
+  keyParams.alertPrompt = NULL;
 
   status = SecKeychainItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams,
                                  &exportedData);
 
-  if (status != noErr || exportedData == 0) {
+  if (status != noErr || exportedData == NULL) {
     fprintf(stderr, "keychain_access: Exporting public key failed: %d\n",
             (int)status);
     return 1;
@@ -215,8 +215,8 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
 
 int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
   OSStatus status = 0;
-  SecKeychainSearchRef searchRef = 0;
-  SecKeychainItemRef itemRef = 0;
+  SecKeychainSearchRef searchRef = NULL;
+  SecKeychainItemRef itemRef = NULL;
   SecItemClass itemClass;
 
   SecKeychainAttribute labelAttr;
@@ -236,11 +236,11 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   if (status != noErr) {
   searchFailed:
-    if (searchRef) {
+    if (searchRef != NULL) {
       CFRelease(searchRef);
     }
 
-    if (itemRef) {
+    if (itemRef != NULL) {
       CFRelease(itemRef);
     }
 
