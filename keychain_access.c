@@ -24,6 +24,7 @@
 
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -392,5 +393,16 @@ int main(int p_argc, char **p_argv) {
 }
 
 void kca_print_status_error(const char *prefix, OSStatus status) {
-  fprintf(stderr, "keychain_access: %s: %d\n", prefix, (int)status);
+  CFStringRef string = SecCopyErrorMessageString(status, NULL);
+  char *bytes = malloc(sizeof(char) * 1024);
+
+  if (CFStringGetCString(string, bytes, 1024, kCFStringEncodingUTF8) == true) {
+    fprintf(stderr, "keychain_access: %s: (%d) %s\n", prefix, (int)status,
+            bytes);
+  } else {
+    fprintf(stderr, "keychain_access: %s: %d\n", prefix, (int)status);
+  }
+
+  free(bytes);
+  CFRelease(string);
 }
