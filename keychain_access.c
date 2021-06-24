@@ -24,6 +24,7 @@
 
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -36,6 +37,8 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/pkcs12.h>
+
+void kca_print_status_error(const char *, OSStatus);
 
 /**
  *  @param p_password NULL here means no password.
@@ -75,8 +78,8 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   status = SecKeychainItemExport(p_keyItem, kSecFormatWrappedPKCS8,
                                  kSecItemPemArmour, &keyParams, &exportedData);
 
-  if (status != noErr) {
-    fprintf(stderr, "Export error: %d\n", (int)status);
+  if (status != errSecSuccess) {
+    kca_print_status_error("Export error", status);
     return 1;
   }
 
@@ -164,9 +167,8 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   status = SecKeychainItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams,
                                  &exportedData);
 
-  if (status != noErr || exportedData == NULL) {
-    fprintf(stderr, "keychain_access: Exporting public key failed: %d\n",
-            (int)status);
+  if (status != errSecSuccess || exportedData == NULL) {
+    kca_print_status_error("Exporting public key failed", status);
     return 1;
   }
 
@@ -232,9 +234,10 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
                                                  CSSM_DL_DB_RECORD_ANY,
                                                  &searchList, &searchRef);
 
-  char *errorMessage = "Search for item named %s failed: %d\n";
+  char errorMessage[1024];
+  snprintf(errorMessage, 1023, "Search for item named %s failed", p_keyName);
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
   searchFailed:
     if (searchRef != NULL) {
       CFRelease(searchRef);
@@ -245,17 +248,17 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
     }
 
     if (status == errSecItemNotFound) {
-      fprintf(stderr, "Could not find a item named %s.\n", p_keyName);
-    } else {
-      fprintf(stderr, errorMessage, p_keyName, (int)status);
+      snprintf(errorMessage, 1023, "Could not find a item named %s", p_keyName);
     }
+
+    kca_print_status_error(errorMessage, status);
 
     return 1;
   }
 
   status = SecKeychainSearchCopyNext(searchRef, &itemRef);
 
-  if (status != noErr) {
+  if (status != errSecSuccess) {
     goto searchFailed;
   }
 
@@ -263,8 +266,8 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
 
   status = SecKeychainItemCopyContent(itemRef, &itemClass, NULL, NULL, NULL);
 
-  if (status != noErr) {
-    errorMessage = "Copy content failed for %s: %d\n";
+  if (status != errSecSuccess) {
+    snprintf(errorMessage, 1023, "Copy content failed for %s", p_keyName);
     goto searchFailed;
   }
 
@@ -388,4 +391,19 @@ int main(int p_argc, char **p_argv) {
   }
 
   return kca_print_key(keyName, keyPassword);
+}
+
+void kca_print_status_error(const char *prefix, OSStatus status) {
+  CFStringRef string = SecCopyErrorMessageString(status, NULL);
+  char *bytes = malloc(sizeof(char) * 1024);
+
+  if (CFStringGetCString(string, bytes, 1024, kCFStringEncodingUTF8) == true) {
+    fprintf(stderr, "keychain_access: %s: (%d) %s\n", prefix, (int)status,
+            bytes);
+  } else {
+    fprintf(stderr, "keychain_access: %s: %d\n", prefix, (int)status);
+  }
+
+  free(bytes);
+  CFRelease(string);
 }
