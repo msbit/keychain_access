@@ -38,6 +38,7 @@
 #include <openssl/pem.h>
 #include <openssl/pkcs12.h>
 
+void kca_print_handling_error(SecItemClass);
 void kca_print_status_error(const char *, OSStatus);
 
 /**
@@ -279,35 +280,7 @@ int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
     return kca_print_public_key(itemRef);
   }
 
-  printf("Handling ");
-
-  switch (itemClass) {
-  case kSecInternetPasswordItemClass:
-    printf("kSecInternetPasswordItemClass");
-    break;
-  case kSecGenericPasswordItemClass:
-    printf("kSecGenericPasswordItemClass");
-    break;
-  case kSecCertificateItemClass:
-    printf("kSecCertificateItemClass");
-    break;
-  case CSSM_DL_DB_RECORD_SYMMETRIC_KEY:
-    printf("CSSM_DL_DB_RECORD_SYMMETRIC_KEY");
-    break;
-  case CSSM_DL_DB_RECORD_ALL_KEYS:
-    printf("CSSM_DL_DB_RECORD_ALL_KEYS");
-    break;
-  case CSSM_DL_DB_RECORD_PUBLIC_KEY:
-    printf("CSSM_DL_DB_RECORD_PUBLIC_KEY");
-    break;
-  case CSSM_DL_DB_RECORD_PRIVATE_KEY:
-    printf("CSSM_DL_DB_RECORD_PRIVATE_KEY");
-    break;
-  default:
-    printf("unknown item class (%u)", (unsigned int)itemClass);
-  }
-
-  printf(" is not yet implemented.\n");
+  kca_print_handling_error(itemClass);
 
   return 1;
 }
@@ -391,6 +364,38 @@ int main(int p_argc, char **p_argv) {
   }
 
   return kca_print_key(keyName, keyPassword);
+}
+
+void kca_print_handling_error(SecItemClass itemClass) {
+  printf("Handling ");
+
+  switch (itemClass) {
+  case kSecInternetPasswordItemClass:
+    printf("kSecInternetPasswordItemClass");
+    break;
+  case kSecGenericPasswordItemClass:
+    printf("kSecGenericPasswordItemClass");
+    break;
+  case kSecCertificateItemClass:
+    printf("kSecCertificateItemClass");
+    break;
+  case CSSM_DL_DB_RECORD_SYMMETRIC_KEY:
+    printf("CSSM_DL_DB_RECORD_SYMMETRIC_KEY");
+    break;
+  case CSSM_DL_DB_RECORD_ALL_KEYS:
+    printf("CSSM_DL_DB_RECORD_ALL_KEYS");
+    break;
+  case CSSM_DL_DB_RECORD_PUBLIC_KEY:
+    printf("CSSM_DL_DB_RECORD_PUBLIC_KEY");
+    break;
+  case CSSM_DL_DB_RECORD_PRIVATE_KEY:
+    printf("CSSM_DL_DB_RECORD_PRIVATE_KEY");
+    break;
+  default:
+    printf("unknown item class (%u)", (unsigned int)itemClass);
+  }
+
+  printf(" is not yet implemented.\n");
 }
 
 void kca_print_status_error(const char *prefix, OSStatus status) {
