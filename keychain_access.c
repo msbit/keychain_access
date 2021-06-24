@@ -163,7 +163,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   }
   else
   {
-    fprintf(stderr, "Export error: %ld\n", status);
+    fprintf(stderr, "Export error: %d\n", (int)status);
     return 1;
   }
   
@@ -193,7 +193,7 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem)
   if(status != noErr || exportedData == 0)
   {
     fprintf(stderr,
-        "keychain_access: Exporting public key failed: %ld\n", status);
+        "keychain_access: Exporting public key failed: %d\n", (int)status);
     return 1;
   }
   
@@ -348,7 +348,7 @@ searchFailed:
       break;
     */
     default:
-      printf("unknown item class (%lu)", itemClass);
+      printf("unknown item class (%u)", (unsigned int)itemClass);
     }
 
     printf(" is not yet implemented.\n");
