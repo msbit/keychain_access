@@ -66,12 +66,11 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
     exportKey = CFDataCreate(NULL, (unsigned char *)"12345", 5);
   }
 
-  SecKeyImportExportParameters keyParams;
-  keyParams.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
-  keyParams.flags = 0; // kSecKeySecurePassphrase
-  keyParams.passphrase = exportKey;
-  keyParams.alertTitle = NULL;
-  keyParams.alertPrompt = NULL;
+  SecKeyImportExportParameters keyParams = {
+      .flags = 0, // kSecKeySecurePassphrase
+      .passphrase = exportKey,
+      .version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION,
+  };
 
   CFDataRef exportedData;
   OSStatus status;
@@ -158,12 +157,10 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   CFDataRef exportedData = NULL;
   OSStatus status;
 
-  SecKeyImportExportParameters keyParams;
-  keyParams.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
-  keyParams.flags = 0;
-  keyParams.passphrase = NULL;
-  keyParams.alertTitle = NULL;
-  keyParams.alertPrompt = NULL;
+  SecKeyImportExportParameters keyParams = {
+      .flags = 0,
+      .version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION,
+  };
 
   status = SecKeychainItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams,
                                  &exportedData);
