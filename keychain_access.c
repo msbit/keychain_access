@@ -66,7 +66,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
     exportKey = CFDataCreate(NULL, (unsigned char *)"12345", 5);
   }
 
-  SecKeyImportExportParameters keyParams = {
+  SecItemImportExportKeyParameters keyParams = {
       .flags = 0, // kSecKeySecurePassphrase
       .passphrase = exportKey,
       .version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION,
@@ -75,8 +75,8 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   CFDataRef exportedData;
   OSStatus status;
 
-  status = SecKeychainItemExport(p_keyItem, kSecFormatWrappedPKCS8,
-                                 kSecItemPemArmour, &keyParams, &exportedData);
+  status = SecItemExport(p_keyItem, kSecFormatWrappedPKCS8, kSecItemPemArmour,
+                         &keyParams, &exportedData);
 
   if (status != errSecSuccess) {
     kca_print_status_error("Export error", status);
@@ -157,13 +157,13 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   CFDataRef exportedData = NULL;
   OSStatus status;
 
-  SecKeyImportExportParameters keyParams = {
+  SecItemImportExportKeyParameters keyParams = {
       .flags = 0,
       .version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION,
   };
 
-  status = SecKeychainItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams,
-                                 &exportedData);
+  status =
+      SecItemExport(p_keyItem, 0, kSecItemPemArmour, &keyParams, &exportedData);
 
   if (status != errSecSuccess || exportedData == NULL) {
     kca_print_status_error("Exporting public key failed", status);
