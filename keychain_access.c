@@ -60,10 +60,10 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   CFDataRef exportKey;
 
   if (p_password != NULL) {
-    exportKey =
-        CFDataCreate(NULL, (unsigned char *)p_password, strlen(p_password));
+    exportKey = CFDataCreate(kCFAllocatorDefault, (unsigned char *)p_password,
+                             strlen(p_password));
   } else {
-    exportKey = CFDataCreate(NULL, (unsigned char *)"12345", 5);
+    exportKey = CFDataCreate(kCFAllocatorDefault, (unsigned char *)"12345", 5);
   }
 
   SecItemImportExportKeyParameters keyParams = {
