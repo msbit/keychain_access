@@ -296,7 +296,7 @@ void kca_print_help(FILE *p_fp, const char *p_arg0) {
       p_arg0);
 }
 
-void kca_print_version() {
+void kca_print_version(void) {
 #ifndef KCA_VERSION
 #define KCA_VERSION "v0"
 #endif
