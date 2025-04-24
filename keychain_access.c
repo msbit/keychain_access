@@ -213,73 +213,76 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
   return 0;
 }
 
-int kca_print_key(const char *p_keyName, const char *p_keyPassword) {
-  OSStatus status = 0;
+int kca_print_key(const char *keyName, const char *keyPassword) {
   SecKeychainSearchRef searchRef = NULL;
-  SecKeychainItemRef itemRef = NULL;
-  SecItemClass itemClass;
-
-  SecKeychainAttribute labelAttr;
-  labelAttr.tag = kSecLabelItemAttr;
-  labelAttr.length = strlen(p_keyName);
-  labelAttr.data = (void *)p_keyName;
-
-  SecKeychainAttributeList searchList;
-  searchList.count = 1;
-  searchList.attr = &labelAttr;
-
-  status = SecKeychainSearchCreateFromAttributes(NULL, // Search all kechains
-                                                 CSSM_DL_DB_RECORD_ANY,
-                                                 &searchList, &searchRef);
-
   char errorMessage[1024];
-  snprintf(errorMessage, 1023, "Search for item named %s failed", p_keyName);
+  int result = 0;
 
+  OSStatus status = SecKeychainSearchCreateFromAttributes(
+    NULL,
+    CSSM_DL_DB_RECORD_ANY,
+    &((SecKeychainAttributeList){
+      .attr = &((SecKeychainAttribute){
+        .data = (void *)keyName,
+        .length = strlen(keyName),
+        .tag = kSecLabelItemAttr,
+      }),
+      .count = 1,
+    }),
+    &searchRef
+  );
   if (status != errSecSuccess) {
-  searchFailed:
-    if (searchRef != NULL) {
-      CFRelease(searchRef);
-    }
-
-    if (itemRef != NULL) {
-      CFRelease(itemRef);
-    }
-
-    if (status == errSecItemNotFound) {
-      snprintf(errorMessage, 1023, "Could not find a item named %s", p_keyName);
-    }
-
+    snprintf(errorMessage, 1023, "Search for item named %s failed", keyName);
     kca_print_status_error(errorMessage, status);
-
-    return 1;
+    result = 1;
+    goto cleanup_none;
   }
 
+  SecKeychainItemRef itemRef = NULL;
   status = SecKeychainSearchCopyNext(searchRef, &itemRef);
-
   if (status != errSecSuccess) {
-    goto searchFailed;
+    switch(status) {
+    case errSecItemNotFound:
+      snprintf(errorMessage, 1023, "Could not find a item named %s", keyName);
+      break;
+    default:
+      snprintf(errorMessage, 1023, "Unknown error: %s", keyName);
+      break;
+    }
+    kca_print_status_error(errorMessage, status);
+    result = 1;
+    goto cleanup_search;
   }
 
-  // TODO: cleanup search
-
+  SecItemClass itemClass = 0;
   status = SecKeychainItemCopyContent(itemRef, &itemClass, NULL, NULL, NULL);
-
   if (status != errSecSuccess) {
-    snprintf(errorMessage, 1023, "Copy content failed for %s", p_keyName);
-    goto searchFailed;
+    snprintf(errorMessage, 1023, "Copy content failed for %s", keyName);
+    kca_print_status_error(errorMessage, status);
+    result = 1;
+    goto cleanup_item;
   }
 
-  if (itemClass == CSSM_DL_DB_RECORD_PRIVATE_KEY) {
-    return kca_print_private_key(itemRef, p_keyPassword);
+  switch (itemClass) {
+  case CSSM_DL_DB_RECORD_PRIVATE_KEY:
+    kca_print_private_key(itemRef, keyPassword);
+    break;
+  case CSSM_DL_DB_RECORD_PUBLIC_KEY:
+    kca_print_public_key(itemRef);
+    break;
+  default:
+    kca_print_handling_error(itemClass);
+    break;
   }
 
-  if (itemClass == CSSM_DL_DB_RECORD_PUBLIC_KEY) {
-    return kca_print_public_key(itemRef);
-  }
+cleanup_item:
+  CFRelease(itemRef);
 
-  kca_print_handling_error(itemClass);
+cleanup_search:
+  CFRelease(searchRef);
 
-  return 1;
+cleanup_none:
+  return result;
 }
 
 void kca_print_help(FILE *p_fp, const char *p_arg0) {
