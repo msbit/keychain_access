@@ -44,8 +44,7 @@ void kca_print_status_error(const char *, OSStatus);
 /**
  *  @param p_password NULL here means no password.
  */
-int kca_print_private_key(SecKeychainItemRef p_keyItem,
-                          const char *p_password) {
+int kca_print_private_key(SecKeyRef p_keyItem, const char *p_password) {
   // SecKeychainItemFreeContent(); each time after a CopyContent
 
   // const CSSM_KEY *cssmKeyPtr;
@@ -153,7 +152,7 @@ int kca_print_private_key(SecKeychainItemRef p_keyItem,
   return 0;
 }
 
-int kca_print_public_key(SecKeychainItemRef p_keyItem) {
+int kca_print_public_key(SecKeyRef p_keyItem) {
   CFDataRef exportedData = NULL;
   OSStatus status;
 
@@ -214,72 +213,88 @@ int kca_print_public_key(SecKeychainItemRef p_keyItem) {
 }
 
 int kca_print_key(const char *keyName, const char *keyPassword) {
-  SecKeychainSearchRef searchRef = NULL;
   char errorMessage[1024];
   int result = 0;
 
-  OSStatus status = SecKeychainSearchCreateFromAttributes(
-    NULL,
-    CSSM_DL_DB_RECORD_ANY,
-    &((SecKeychainAttributeList){
-      .attr = &((SecKeychainAttribute){
-        .data = (void *)keyName,
-        .length = strlen(keyName),
-        .tag = kSecLabelItemAttr,
-      }),
-      .count = 1,
-    }),
-    &searchRef
+  CFStringRef attrLabel = CFStringCreateWithCString(
+    kCFAllocatorDefault,
+    keyName,
+    kCFStringEncodingUTF8
   );
-  if (status != errSecSuccess) {
-    snprintf(errorMessage, 1023, "Search for item named %s failed", keyName);
-    kca_print_status_error(errorMessage, status);
+  if (attrLabel == NULL) {
+    kca_print_status_error("CFStringCreateWithCString", 0);
     result = 1;
     goto cleanup_none;
   }
 
-  SecKeychainItemRef itemRef = NULL;
-  status = SecKeychainSearchCopyNext(searchRef, &itemRef);
+  CFDictionaryRef searchQuery = CFDictionaryCreate(
+    kCFAllocatorDefault,
+    (const void *[]){
+      kSecClass,
+      kSecMatchLimit,
+      kSecAttrLabel,
+    },
+    (const void *[]){
+      kSecClassKey,
+      kSecMatchLimitOne,
+      attrLabel,
+    },
+    3,
+    &kCFTypeDictionaryKeyCallBacks,
+    &kCFTypeDictionaryValueCallBacks
+  );
+  if (searchQuery == NULL) {
+    kca_print_status_error("CFDictionaryCreate", 0);
+    result = 1;
+    goto cleanup_attr_label;
+  }
+
+  CFTypeRef searchResult = NULL;
+  OSStatus status = SecItemCopyMatching(searchQuery, &searchResult);
   if (status != errSecSuccess) {
-    switch(status) {
-    case errSecItemNotFound:
-      snprintf(errorMessage, 1023, "Could not find a item named %s", keyName);
-      break;
-    default:
-      snprintf(errorMessage, 1023, "Unknown error: %s", keyName);
-      break;
-    }
+    snprintf(errorMessage, 1023, "Search for item named %s failed", keyName);
     kca_print_status_error(errorMessage, status);
     result = 1;
-    goto cleanup_search;
+    goto cleanup_search_query;
   }
 
-  SecItemClass itemClass = 0;
-  status = SecKeychainItemCopyContent(itemRef, &itemClass, NULL, NULL, NULL);
-  if (status != errSecSuccess) {
-    snprintf(errorMessage, 1023, "Copy content failed for %s", keyName);
-    kca_print_status_error(errorMessage, status);
+  if (CFGetTypeID(searchResult) != SecKeyGetTypeID()) {
+    kca_print_status_error("CFGetTypeID", 0);
     result = 1;
-    goto cleanup_item;
+    goto cleanup_search_result;
   }
 
-  switch (itemClass) {
-  case CSSM_DL_DB_RECORD_PRIVATE_KEY:
-    kca_print_private_key(itemRef, keyPassword);
-    break;
-  case CSSM_DL_DB_RECORD_PUBLIC_KEY:
-    kca_print_public_key(itemRef);
-    break;
-  default:
-    kca_print_handling_error(itemClass);
-    break;
+  CFDictionaryRef keyAttributes = SecKeyCopyAttributes((SecKeyRef)searchResult);
+
+  CFTypeRef attrKeyClass = NULL;
+  if (!CFDictionaryGetValueIfPresent(keyAttributes, kSecAttrKeyClass, &attrKeyClass)) {
+    kca_print_status_error("CFDictionaryGetValueIfPresent", 0);
+    result = 1;
+    goto cleanup_key_attributes;
   }
 
-cleanup_item:
-  CFRelease(itemRef);
+  if (attrKeyClass == kSecAttrKeyClassPrivate) {
+    kca_print_private_key((SecKeyRef)searchResult, keyPassword);
+  } else if (attrKeyClass == kSecAttrKeyClassPublic) {
+    kca_print_public_key((SecKeyRef)searchResult);
+  } else {
+    kca_print_status_error("invalid type", 0);
+    result = 1;
+  }
 
-cleanup_search:
-  CFRelease(searchRef);
+  CFRelease(attrKeyClass);
+
+cleanup_key_attributes:
+  CFRelease(keyAttributes);
+
+cleanup_search_result:
+  CFRelease(searchResult);
+
+cleanup_search_query:
+  CFRelease(searchQuery);
+
+cleanup_attr_label:
+  CFRelease(attrLabel);
 
 cleanup_none:
   return result;
